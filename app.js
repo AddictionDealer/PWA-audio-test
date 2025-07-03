@@ -91,9 +91,69 @@ async function fetchHtmlThroughProxy(targetUrl) {
   }
 }
 
+// Helper to render collapsible subreddit list under the search bar
+function renderSubredditList(allTracks, selectedSubs = null) {
+  // Count occurrences for each subreddit
+  const subredditCounts = {};
+  allTracks.forEach(track => {
+    subredditCounts[track.subreddit] = (subredditCounts[track.subreddit] || 0) + 1;
+  });
+
+  // Sort subreddits by count (descending), then alphabetically
+  const subreddits = Object.entries(subredditCounts)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+  // By default, only the most popular subreddit is enabled
+  if (!selectedSubs) {
+    selectedSubs = new Set([subreddits[0][0]]);
+  }
+
+  let filterContainer = document.getElementById('subredditListContainer');
+  if (!filterContainer) {
+    filterContainer = document.createElement('div');
+    filterContainer.id = 'subredditListContainer';
+    const trackList = document.getElementById('trackList');
+    trackList.parentNode.insertBefore(filterContainer, trackList);
+  }
+
+  // Count enabled subreddits for summary
+  const enabledCount = selectedSubs.size;
+  const totalCount = subreddits.length;
+
+  filterContainer.innerHTML = `
+    <details style="margin: 1rem 0; width:100%;" ${enabledCount === 1 ? '' : 'open'}>
+      <summary style="font-weight:bold;cursor:pointer;">
+        Show Subreddits (${enabledCount} of ${totalCount} enabled)
+      </summary>
+      <div id="subredditFilterList" style="display:flex;flex-wrap:wrap;gap:0.5em 1em;margin:0.5rem 0 0 0; width:100%;">
+        ${subreddits.map(([sub, count], idx) => `
+          <label style="display:inline-flex;align-items:center;font-size:0.95em;padding:0.15em 0.5em;background:#f5f5f5;border-radius:4px;margin-bottom:0.25em;cursor:pointer;">
+            <input type="checkbox" class="subreddit-filter" value="${sub}" style="margin-right:0.3em;" ${selectedSubs.has(sub) ? 'checked' : ''}>
+            ${sub} <span style="color:#888;font-size:0.9em;margin-left:0.3em;">(${count})</span>
+          </label>
+        `).join('')}
+      </div>
+    </details>
+  `;
+
+  // Add event listeners for filtering
+  document.querySelectorAll('.subreddit-filter').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const checkedSubs = new Set(
+        Array.from(document.querySelectorAll('.subreddit-filter:checked')).map(cb => cb.value)
+      );
+      renderSubredditList(allTracks, checkedSubs);
+      createList(document.getElementById('searchInput').value, checkedSubs);
+    });
+  });
+
+  // Return the set of selected subreddits for use in createList
+  return selectedSubs;
+}
+
 let allTracks = [];
 
-async function createList(filter = '') {
+async function createList(filter = '', selectedSubs = null) {
   const tbody = document.getElementById('trackTableBody');
   const mainAudio = document.getElementById('mainAudio');
 
@@ -101,16 +161,23 @@ async function createList(filter = '') {
   if (!allTracks.length) {
     try {
       allTracks = await fetchTracks();
+      selectedSubs = renderSubredditList(allTracks); // Render subreddit list ONCE after fetching
     } catch (e) {
       tbody.innerHTML = `<tr><td colspan="4">Failed to load tracks.</td></tr>`;
       return;
     }
+  } else if (!selectedSubs) {
+    // If not first load, get checked subreddits from DOM
+    selectedSubs = new Set(
+      Array.from(document.querySelectorAll('.subreddit-filter:checked')).map(cb => cb.value)
+    );
   }
 
-  // Filter tracks by title or author
+  // Filter tracks by title or author and selected subreddits
   const tracks = allTracks.filter(track =>
-    track.title.toLowerCase().includes(filter.toLowerCase()) ||
-    track.author.toLowerCase().includes(filter.toLowerCase())
+    (track.title.toLowerCase().includes(filter.toLowerCase()) ||
+     track.author.toLowerCase().includes(filter.toLowerCase())) &&
+    selectedSubs.has(track.subreddit)
   );
 
   tbody.innerHTML = '';
