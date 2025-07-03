@@ -57,12 +57,38 @@ function extractSoundgasmLinks(html) {
   return Array.from(new Set([...links, ...rawMatches]));
 }
 
+// Add this helper function near your other extract helpers
+function extractM4aLinks(html) {
+  // Find all .m4a links in the HTML
+  const urlRegex = /https?:\/\/[^"'<> )]+\.m4a/g;
+  return html.match(urlRegex) || [];
+}
+
 async function fetchHtmlThroughProxy(targetUrl) {
-  // Adjust this endpoint to match your proxy setup
-  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}.json`;
+  // If the target is a Reddit link, append .json for easier parsing
+  let fetchUrl = targetUrl;
+  if (/^https:\/\/(www\.)?reddit\.com\//.test(targetUrl)) {
+    // Remove any trailing slash before appending .json
+    fetchUrl = fetchUrl.replace(/\/$/, '') + '.json';
+  }
+  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(fetchUrl)}`;
   const response = await fetch(proxyUrl);
   if (!response.ok) throw new Error('Failed to fetch HTML');
-  return await response.text();
+  // If it's a Reddit .json, parse and extract the selftext_html or body_html
+  if (fetchUrl.endsWith('.json')) {
+    const json = await response.json();
+    // Try to extract the post body HTML (for posts) or comment body HTML (for comments)
+    let html = '';
+    if (Array.isArray(json) && json[0]?.data?.children?.[0]?.data?.selftext_html) {
+      html = json[0].data.children[0].data.selftext_html;
+    } else if (json?.data?.children?.[0]?.data?.selftext_html) {
+      html = json.data.children[0].data.selftext_html;
+    }
+    // Fallback: stringify if nothing found
+    return html || JSON.stringify(json);
+  } else {
+    return await response.text();
+  }
 }
 
 async function createList() {
@@ -119,10 +145,37 @@ async function createList() {
       dlBtn.textContent = 'Play Offline';
     }
 
-    playBtn.addEventListener('click', () => {
-      mainAudio.src = track.url;
-      mainAudio.style.display = 'block';
-      mainAudio.play();
+    playBtn.addEventListener('click', async () => {
+      playBtn.disabled = true;
+      playBtn.textContent = 'Loading...';
+      try {
+        // 1. Fetch Reddit page and extract Soundgasm link
+        const redditUrl = `https://www.reddit.com/r/${track.subreddit}/comments/${track.id}/`;
+        const redditHtml = await fetchHtmlThroughProxy(redditUrl);
+        const soundgasmLinks = extractSoundgasmLinks(redditHtml);
+
+        if (soundgasmLinks.length > 0) {
+          // 2. Fetch Soundgasm page and extract .m4a link
+          const soundgasmHtml = await fetchHtmlThroughProxy(soundgasmLinks[0]);
+          const m4aLinks = extractM4aLinks(soundgasmHtml);
+
+          if (m4aLinks.length > 0) {
+            // Replace the url for the entry and play it
+            track.url = m4aLinks[0];
+            mainAudio.src = track.url;
+            mainAudio.style.display = 'block';
+            mainAudio.play();
+          } else {
+            alert('No .m4a audio link found on Soundgasm page.');
+          }
+        } else {
+          alert('No soundgasm.net links found on Reddit post.');
+        }
+      } catch (err) {
+        alert('Error fetching or extracting audio link.');
+      }
+      playBtn.textContent = 'Play';
+      playBtn.disabled = false;
     });
 
     dlBtn.addEventListener('click', async () => {
