@@ -1,21 +1,3 @@
-const tracks = [
-  {
-    id: 'sample1',
-    title: 'Sample Audio 1',
-    artist: 'Artist One',
-    duration: '3:21',
-    url: './audio/sample1.m4a'
-  },
-  {
-    id: 'sample2',
-    title: 'Sample Audio 2',
-    artist: 'Artist Two',
-    duration: '2:45',
-    url: './audio/sample2.m4a'
-  },
-  // Add more tracks as needed
-];
-
 const CACHE_NAME = 'audio-cache-v1';
 
 async function isCached(requestUrl) {
@@ -27,6 +9,12 @@ async function isCached(requestUrl) {
 async function cacheTrack(requestUrl) {
   const cache = await caches.open(CACHE_NAME);
   await cache.add(requestUrl);
+}
+
+async function fetchTracks() {
+  const response = await fetch('https://gwasi.com/delta.json');
+  if (!response.ok) throw new Error('Failed to fetch track list');
+  return response.json();
 }
 
 async function createList() {
@@ -48,12 +36,20 @@ async function createList() {
   const tbody = document.getElementById('trackTableBody');
   const mainAudio = document.getElementById('mainAudio');
 
+  let tracks = [];
+  try {
+    tracks = await fetchTracks();
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="4">Failed to load tracks.</td></tr>`;
+    return;
+  }
+
   for (const track of tracks) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${track.title}</td>
-      <td>${track.artist}</td>
-      <td>${track.duration}</td>
+      <td>${track.title || ''}</td>
+      <td>${track.artist || ''}</td>
+      <td>${track.duration || ''}</td>
       <td>
         <button id="play-${track.id}">Play</button>
         <button id="download-${track.id}">Download & Play Offline</button>
