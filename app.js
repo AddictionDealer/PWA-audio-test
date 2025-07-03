@@ -92,21 +92,7 @@ async function fetchHtmlThroughProxy(targetUrl) {
 }
 
 async function createList() {
-  const container = document.getElementById('trackList');
-  container.innerHTML = `
-    <table style="width:100%;border-collapse:collapse;">
-      <thead>
-        <tr>
-          <th style="text-align:left;">Title</th>
-          <th style="text-align:left;">Artist</th>
-          <th style="text-align:left;">Duration</th>
-          <th style="text-align:left;">Actions</th>
-        </tr>
-      </thead>
-      <tbody id="trackTableBody"></tbody>
-    </table>
-    <audio id="mainAudio" controls style="width:100%;margin-top:1rem;display:none;"></audio>
-  `;
+  // No need to set container.innerHTML here
   const tbody = document.getElementById('trackTableBody');
   const mainAudio = document.getElementById('mainAudio');
 
@@ -149,21 +135,16 @@ async function createList() {
       playBtn.disabled = true;
       playBtn.textContent = 'Loading...';
       try {
-        // 1. Fetch Reddit page and extract Soundgasm link
-        const redditUrl = `https://www.reddit.com/r/${track.subreddit}/comments/${track.id}/`;
         const redditHtml = await fetchHtmlThroughProxy(redditUrl);
         const soundgasmLinks = extractSoundgasmLinks(redditHtml);
 
         if (soundgasmLinks.length > 0) {
-          // 2. Fetch Soundgasm page and extract .m4a link
           const soundgasmHtml = await fetchHtmlThroughProxy(soundgasmLinks[0]);
           const m4aLinks = extractM4aLinks(soundgasmHtml);
 
           if (m4aLinks.length > 0) {
-            // Replace the url for the entry and play it
             track.url = m4aLinks[0];
             mainAudio.src = track.url;
-            mainAudio.style.display = 'block';
             mainAudio.play();
           } else {
             alert('No .m4a audio link found on Soundgasm page.');
@@ -187,7 +168,6 @@ async function createList() {
         dlBtn.disabled = false;
       }
       mainAudio.src = track.url;
-      mainAudio.style.display = 'block';
       mainAudio.play();
     });
 
@@ -196,7 +176,6 @@ async function createList() {
       soundgasmBtn.textContent = 'Searching...';
       try {
         const html = await fetchHtmlThroughProxy(redditUrl);
-        // Debug: dump HTML content to console
         const soundgasmLinks = extractSoundgasmLinks(html);
         if (soundgasmLinks.length > 0) {
           window.open(soundgasmLinks[0], '_blank', 'noopener');

@@ -9,7 +9,36 @@
 </head>
 <body>
     <h1>PWA Audio Demo</h1>
-    <ul id="trackList"></ul>
+    <div id="audioControlsWrapper"
+      style="
+        position:fixed;
+        left:0;
+        right:0;
+        bottom:0;
+        width:100vw;
+        z-index:1000;
+        background:#fff;
+        box-shadow:0 -2px 8px rgba(0,0,0,0.08);
+        padding:0.5rem 0.5rem 0.5rem 0.5rem;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+      ">
+      <audio id="mainAudio" controls style="width:100%;max-width:600px;"></audio>
+    </div>
+    <div id="trackList">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="text-align:left;">Title</th>
+            <th style="text-align:left;">Artist</th>
+            <th style="text-align:left;">Duration</th>
+            <th style="text-align:left;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="trackTableBody"></tbody>
+      </table>
+    </div>
     <script src="./app.js"></script>
 </body>
 </html>
