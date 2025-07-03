@@ -73,6 +73,9 @@ async function createList() {
   }
 
   for (const track of tracks) {
+    // Construct Reddit link: use subreddit from entry object
+    const redditUrl = `https://www.reddit.com/r/${track.subreddit}/comments/${track.id}/`;
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${track.title || ''}</td>
@@ -81,6 +84,9 @@ async function createList() {
       <td>
         <button id="play-${track.id}">Play</button>
         <button id="download-${track.id}">Download & Play Offline</button>
+        <a href="${redditUrl}" target="_blank" rel="noopener" id="reddit-${track.id}">
+          <button>Reddit Link</button>
+        </a>
       </td>
     `;
     tbody.appendChild(tr);
