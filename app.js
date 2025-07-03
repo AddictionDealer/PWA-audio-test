@@ -1,9 +1,19 @@
 const tracks = [
   {
-    id: 'sample',
-    title: 'Sample Audio',
-    url: 'https://corsproxy.io/?https://media.soundgasm.net/sounds/0957e1382930fa02a7cf7a07ff2adad9dc17c5f7.m4a'
-  }
+    id: 'sample1',
+    title: 'Sample Audio 1',
+    artist: 'Artist One',
+    duration: '3:21',
+    url: './audio/sample1.m4a'
+  },
+  {
+    id: 'sample2',
+    title: 'Sample Audio 2',
+    artist: 'Artist Two',
+    duration: '2:45',
+    url: './audio/sample2.m4a'
+  },
+  // Add more tracks as needed
 ];
 
 const CACHE_NAME = 'audio-cache-v1';
@@ -20,29 +30,49 @@ async function cacheTrack(requestUrl) {
 }
 
 async function createList() {
-  const ul = document.getElementById('trackList');
-  for (const track of tracks) {
-    const li = document.createElement('li');
-    li.innerHTML = `
-      <strong>${track.title}</strong>
-      <audio id="audio-${track.id}" controls style="width: 100%; margin-top: .5rem;"></audio>
-      <button id="stream-${track.id}">Stream</button>
-      <button id="download-${track.id}">Download & Play Offline</button>
-    `;
-    ul.appendChild(li);
+  const container = document.getElementById('trackList');
+  container.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left;">Title</th>
+          <th style="text-align:left;">Artist</th>
+          <th style="text-align:left;">Duration</th>
+          <th style="text-align:left;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="trackTableBody"></tbody>
+    </table>
+    <audio id="mainAudio" controls style="width:100%;margin-top:1rem;display:none;"></audio>
+  `;
+  const tbody = document.getElementById('trackTableBody');
+  const mainAudio = document.getElementById('mainAudio');
 
-    const audioElem = li.querySelector(`#audio-${track.id}`);
-    const streamBtn = li.querySelector(`#stream-${track.id}`);
-    const dlBtn = li.querySelector(`#download-${track.id}`);
+  for (const track of tracks) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${track.title}</td>
+      <td>${track.artist}</td>
+      <td>${track.duration}</td>
+      <td>
+        <button id="play-${track.id}">Play</button>
+        <button id="download-${track.id}">Download & Play Offline</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+
+    const playBtn = tr.querySelector(`#play-${track.id}`);
+    const dlBtn = tr.querySelector(`#download-${track.id}`);
 
     // Disable download button if already cached
     if (await isCached(track.url)) {
       dlBtn.textContent = 'Play Offline';
     }
 
-    streamBtn.addEventListener('click', () => {
-      audioElem.src = track.url;
-      audioElem.play();
+    playBtn.addEventListener('click', () => {
+      mainAudio.src = track.url;
+      mainAudio.style.display = 'block';
+      mainAudio.play();
     });
 
     dlBtn.addEventListener('click', async () => {
@@ -53,9 +83,9 @@ async function createList() {
         dlBtn.textContent = 'Play Offline';
         dlBtn.disabled = false;
       }
-      // The service worker will intercept and serve from cache
-      audioElem.src = track.url;
-      audioElem.play();
+      mainAudio.src = track.url;
+      mainAudio.style.display = 'block';
+      mainAudio.play();
     });
   }
 }
