@@ -2,7 +2,7 @@ const tracks = [
   {
     id: 'sample',
     title: 'Sample Audio',
-    url: 'https://media.soundgasm.net/sounds/0957e1382930fa02a7cf7a07ff2adad9dc17c5f7.m4a'
+    url: 'https://corsproxy.io/?https://media.soundgasm.net/sounds/0957e1382930fa02a7cf7a07ff2adad9dc17c5f7.m4a'
   }
 ];
 
