@@ -91,19 +91,29 @@ async function fetchHtmlThroughProxy(targetUrl) {
   }
 }
 
-async function createList() {
-  // No need to set container.innerHTML here
+let allTracks = [];
+
+async function createList(filter = '') {
   const tbody = document.getElementById('trackTableBody');
   const mainAudio = document.getElementById('mainAudio');
 
-  let tracks = [];
-  try {
-    tracks = await fetchTracks();
-  } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="4">Failed to load tracks.</td></tr>`;
-    return;
+  // Only fetch once, cache for filtering
+  if (!allTracks.length) {
+    try {
+      allTracks = await fetchTracks();
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="4">Failed to load tracks.</td></tr>`;
+      return;
+    }
   }
 
+  // Filter tracks by title or author
+  const tracks = allTracks.filter(track =>
+    track.title.toLowerCase().includes(filter.toLowerCase()) ||
+    track.author.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  tbody.innerHTML = '';
   for (const track of tracks) {
     const redditUrl = `https://www.reddit.com/r/${track.subreddit}/comments/${track.id}/`;
 
@@ -191,6 +201,11 @@ async function createList() {
   }
 }
 
+// Add search event listener
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  createList(e.target.value);
+});
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('service-worker.js');
@@ -200,4 +215,5 @@ if ('serviceWorker' in navigator) {
 // Cache delta.json on load
 cacheDeltaFile();
 
+// Initial call to populate the list
 createList();
