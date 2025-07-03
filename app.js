@@ -45,6 +45,26 @@ async function fetchTracks() {
   }));
 }
 
+function extractSoundgasmLinks(html) {
+  // Use DOMParser to parse the HTML and extract all soundgasm.net links
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const links = Array.from(doc.querySelectorAll('a[href*="soundgasm.net"]'))
+    .map(a => a.href);
+  // Improved regex: stops at ), and other common delimiters
+  const urlRegex = /https?:\/\/soundgasm\.net\/[^\s"'<>)]+/g;
+  const rawMatches = html.match(urlRegex) || [];
+  // Combine and deduplicate
+  return Array.from(new Set([...links, ...rawMatches]));
+}
+
+async function fetchHtmlThroughProxy(targetUrl) {
+  // Adjust this endpoint to match your proxy setup
+  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}.json`;
+  const response = await fetch(proxyUrl);
+  if (!response.ok) throw new Error('Failed to fetch HTML');
+  return await response.text();
+}
+
 async function createList() {
   const container = document.getElementById('trackList');
   container.innerHTML = `
@@ -73,7 +93,6 @@ async function createList() {
   }
 
   for (const track of tracks) {
-    // Construct Reddit link: use subreddit from entry object
     const redditUrl = `https://www.reddit.com/r/${track.subreddit}/comments/${track.id}/`;
 
     const tr = document.createElement('tr');
@@ -87,12 +106,14 @@ async function createList() {
         <a href="${redditUrl}" target="_blank" rel="noopener" id="reddit-${track.id}">
           <button>Reddit Link</button>
         </a>
+        <button id="soundgasm-${track.id}">Soundgasm</button>
       </td>
     `;
     tbody.appendChild(tr);
 
     const playBtn = tr.querySelector(`#play-${track.id}`);
     const dlBtn = tr.querySelector(`#download-${track.id}`);
+    const soundgasmBtn = tr.querySelector(`#soundgasm-${track.id}`);
 
     if (await isCached(track.url)) {
       dlBtn.textContent = 'Play Offline';
@@ -115,6 +136,25 @@ async function createList() {
       mainAudio.src = track.url;
       mainAudio.style.display = 'block';
       mainAudio.play();
+    });
+
+    soundgasmBtn.addEventListener('click', async () => {
+      soundgasmBtn.disabled = true;
+      soundgasmBtn.textContent = 'Searching...';
+      try {
+        const html = await fetchHtmlThroughProxy(redditUrl);
+        // Debug: dump HTML content to console
+        const soundgasmLinks = extractSoundgasmLinks(html);
+        if (soundgasmLinks.length > 0) {
+          window.open(soundgasmLinks[0], '_blank', 'noopener');
+        } else {
+          alert('No soundgasm.net links found on Reddit post.');
+        }
+      } catch (err) {
+        alert('Error fetching Reddit post or extracting soundgasm link.');
+      }
+      soundgasmBtn.textContent = 'Soundgasm';
+      soundgasmBtn.disabled = false;
     });
   }
 }
