@@ -12,7 +12,7 @@ async function cacheTrack(requestUrl) {
 }
 
 async function fetchTracks() {
-  const response = await fetch('https://gwasi.com/delta.json');
+  const response = await fetch('https://corsproxy.io/?https://gwasi.com/delta.json');
   if (!response.ok) throw new Error('Failed to fetch track list');
   return response.json();
 }
